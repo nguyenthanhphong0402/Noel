@@ -230,11 +230,13 @@
   </div>
 
   <!-- Mobile App Bar -->
-  <div id="appbar">
-    <button class="appbtn" id="m-toggle-ui">🙈 Ẩn UI</button>
-    <button class="appbtn primary" id="m-mode">🌲 TREE</button>
-    <button class="appbtn" id="m-focus">🔎 FOCUS</button>
-    <button class="appbtn" id="m-music">🎵 NHẠC</button>
+ <div id="appbar">
+  <button class="appbtn" id="m-toggle-ui">🙈 UI</button>
+  <button class="appbtn" id="m-add-photo">🖼️ ẢNH</button>
+  <button class="appbtn primary" id="m-mode">🌲 TREE</button>
+  <button class="appbtn" id="m-music">🎵 NHẠC</button>
+</div>
+
   </div>
 
   <!-- hidden webcam wrapper (PC only) -->
@@ -963,13 +965,23 @@
     }
 
     // ---------- Events ----------
-    function setupEvents(){
-      window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        composer.setSize(window.innerWidth, window.innerHeight);
-      });
+   function setupEvents() {
+
+  // resize
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    composer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  // 📱 Mobile: nút ẢNH -> mở chọn ảnh
+  document.getElementById("m-add-photo")?.addEventListener("click", () => {
+    document.getElementById("file-input")?.click();
+  });
+
+}
+
 
       $("#file-input").addEventListener('change', handleImageUpload);
       $("#audio-input").addEventListener('change', handleAudioUpload);
@@ -1150,3 +1162,4 @@
   </script>
 </body>
 </html>
+
