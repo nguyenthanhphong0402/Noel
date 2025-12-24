@@ -235,6 +235,7 @@
     <button class="appbtn primary" id="m-mode">🌲 TREE</button>
     <button class="appbtn" id="m-snow">❄️ TUYẾT</button>
     <button class="appbtn" id="m-play">🎵 PHÁT</button>
+    <button onclick="toggleMusic()">🎵 NHẠC</button>
   </div>
 
   <!-- hidden webcam (PC only) -->
@@ -1045,5 +1046,22 @@
 
     init();
   </script>
+  <!-- 🎵 Nhạc Noel mặc định -->
+<audio id="bgm" src="./noel.mp3" loop preload="auto"></audio>
+<script>
+  const bgm = document.getElementById("bgm");
+  let musicOn = false;
+
+  function toggleMusic() {
+    if (!musicOn) {
+      bgm.play();
+      musicOn = true;
+    } else {
+      bgm.pause();
+      musicOn = false;
+    }
+  }
+</script>
 </body>
 </html>
+
