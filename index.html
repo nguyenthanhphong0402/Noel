@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NOEL_V3_FULL</title>
+  <title>NOEL_APP_MOBILE</title>
 
   <style>
     body { margin: 0; overflow: hidden; background:#000; font-family: 'Times New Roman', serif; }
@@ -13,8 +13,8 @@
       position:absolute; inset:0; z-index:10; pointer-events:none;
       display:flex; flex-direction:column; align-items:center;
       padding-top:34px; box-sizing:border-box;
+      transition: opacity .25s ease;
     }
-    .ui-hidden{ opacity:0; pointer-events:none !important; }
 
     #loader{
       position:absolute; inset:0; background:#000; z-index:100;
@@ -25,10 +25,6 @@
       color:#d4af37; font-size:14px; letter-spacing:4px; margin-top:20px;
       text-transform:uppercase; font-weight:100;
     }
-	.ui-hidden{
-  	display: none !important;
-    }
-
     .spinner{
       width:40px; height:40px; border:1px solid rgba(212,175,55,.2);
       border-top:1px solid #d4af37; border-radius:50%;
@@ -48,23 +44,26 @@
       text-align:center;
       padding: 0 14px;
     }
+
     #subtitle{
       margin-top:10px;
-      color:rgba(255,255,255,.7);
+      color:rgba(255,255,255,.72);
       font-size:12px;
       letter-spacing:1px;
       text-transform:uppercase;
       pointer-events:none;
       text-align:center;
       padding: 0 14px;
+      transition: opacity .25s ease;
     }
 
+    /* Desktop controls (top) */
     .controls{
       margin-top:18px;
       pointer-events:auto;
       display:flex; gap:10px; flex-wrap:wrap;
       align-items:center; justify-content:center;
-      transition:opacity .5s ease;
+      transition:opacity .25s ease;
       padding: 0 14px;
     }
     .btn{
@@ -91,7 +90,7 @@
     }
     .btn.secondary{
       border-color: rgba(255,255,255,.12);
-      color: rgba(255,255,255,.8);
+      color: rgba(255,255,255,.85);
     }
     .btn.secondary:hover{
       background: rgba(255,255,255,.9);
@@ -109,6 +108,7 @@
       pointer-events:none;
       text-align:center;
       padding: 0 14px;
+      transition: opacity .25s ease;
     }
 
     #status-pill{
@@ -125,22 +125,59 @@
       text-align:center;
       max-width: min(560px, 92vw);
       line-height: 1.35;
+      transition: opacity .25s ease;
     }
 
-    /* Webcam wrapper (ẩn) */
-    #webcam-wrapper{
-      position:absolute; bottom:40px; right:40px;
-      width:120px; height:90px;
-      border:1px solid rgba(255,255,255,.1);
-      overflow:hidden; opacity:0; pointer-events:none;
+    /* Hide helper */
+    .ui-hidden { display:none !important; }
+
+    /* Mobile App UI bar */
+    #appbar { display:none; }
+    @media (max-width: 768px) {
+      #controls { display:none !important; } /* dùng appbar */
+      #hint { display:none !important; }     /* gọn */
+      #subtitle { font-size: 11px; opacity: .85; }
+
+      #appbar{
+        display:flex;
+        position:fixed;
+        left:12px; right:12px; bottom:14px;
+        z-index:50;
+        gap:10px;
+        padding:10px 12px;
+        border-radius:18px;
+        background:rgba(0,0,0,.45);
+        border:1px solid rgba(255,255,255,.10);
+        backdrop-filter: blur(10px);
+        align-items:center;
+        justify-content:space-between;
+        pointer-events:auto;
+        transition: opacity .25s ease;
+      }
+      .appbtn{
+        flex: 1;
+        border:1px solid rgba(255,255,255,.12);
+        background: rgba(255,255,255,.06);
+        color: rgba(255,255,255,.92);
+        padding: 10px 10px;
+        border-radius: 14px;
+        font-size: 12px;
+        letter-spacing: .5px;
+        text-transform: uppercase;
+        cursor: pointer;
+        user-select: none;
+      }
+      .appbtn:active{ transform: scale(.98); }
+      .appbtn.primary{
+        border-color: rgba(212,175,55,.35);
+        background: rgba(212,175,55,.18);
+        color: #f7e6a6;
+      }
     }
 
-    /* mobile spacing */
-    @media (max-width: 520px){
-      h1{ font-size: 40px; letter-spacing: 4px; }
-      #subtitle{ font-size: 11px; }
-      .btn{ padding: 9px 12px; font-size: 9px; letter-spacing: 1.5px; }
-    }
+    /* UI OFF toggle */
+    .ui-off #ui-layer{ opacity:0; pointer-events:none; }
+    .ui-off #appbar{ opacity:0; pointer-events:none; }
   </style>
 
   <style>
@@ -168,8 +205,9 @@
 
   <div id="ui-layer">
     <h1 id="title">NOEL</h1>
-    <div id="subtitle">Click ảnh để phóng to • Kéo để xoay (mobile)</div>
+    <div id="subtitle">Mobile: 1 ngón xoay • 2 ngón zoom • double tap focus • swipe đổi mode</div>
 
+    <!-- Desktop controls -->
     <div class="controls" id="controls">
       <label class="btn">
         🖼️ Thêm ảnh
@@ -184,25 +222,29 @@
       </label>
 
       <button class="btn secondary" id="btn-snow">❄️ Tuyết: Bật</button>
-
       <button class="btn secondary" id="btn-mode">🔁 Mode: TREE</button>
     </div>
 
-    <div id="hint">Phím tắt: 1=Tree • 2=Scatter • 3=Focus • ESC=Thoát Focus • Space=Nhạc • S=Tuyết • H=Ẩn nút</div>
-    <div id="status-pill">Gesture: đang khởi tạo… (nếu webcam bị bận, hiệu ứng vẫn chạy bình thường)</div>
+    <div id="hint">PC: 1=Tree • 2=Scatter • 3=Focus • ESC=Thoát • Space=Nhạc • S=Tuyết • H=Ẩn UI</div>
+    <div id="status-pill">Gesture camera: chỉ hỗ trợ tốt trên PC. iPhone sẽ tự tắt và dùng touch.</div>
   </div>
 
-  <div id="webcam-wrapper">
+  <!-- Mobile App Bar -->
+  <div id="appbar">
+    <button class="appbtn" id="m-toggle-ui">🙈 Ẩn UI</button>
+    <button class="appbtn primary" id="m-mode">🌲 TREE</button>
+    <button class="appbtn" id="m-focus">🔎 FOCUS</button>
+    <button class="appbtn" id="m-music">🎵 NHẠC</button>
+  </div>
+
+  <!-- hidden webcam wrapper (PC only) -->
+  <div id="webcam-wrapper" style="display:none;">
     <video id="webcam" autoplay playsinline style="display:none;"></video>
-    <canvas id="webcam-preview"></canvas>
   </div>
 
-  <!-- Audio element (nguồn sẽ set bằng upload hoặc URL) -->
   <audio id="bgm" crossorigin="anonymous"></audio>
 
   <script type="module">
-    console.log("RUNNING NOEL_V3_FULL", new Date().toISOString());
-
     import * as THREE from 'three';
     import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
     import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -210,12 +252,17 @@
     import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
     import { FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision';
 
-    // --------- Helpers (UI) ----------
     const $ = (sel) => document.querySelector(sel);
+
     const titleEl = $("#title");
     const subtitleEl = $("#subtitle");
     const statusEl = $("#status-pill");
     const controlsEl = $("#controls");
+
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const isMobile = matchMedia("(max-width: 768px)").matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const DPR = Math.min(window.devicePixelRatio || 1, isMobile ? 1.6 : 2.0);
+
     function setStatus(t){ statusEl.textContent = t; }
     function setTitle(t){ titleEl.textContent = t; }
 
@@ -233,11 +280,15 @@
       return GREETINGS[Math.floor(Math.random()*GREETINGS.length)];
     }
 
-    // --------- Device tuning ----------
-    const isMobile = matchMedia("(max-width: 768px)").matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    const DPR = Math.min(window.devicePixelRatio || 1, isMobile ? 1.6 : 2.0);
+    // UI toggle (PC key H + mobile button)
+    function toggleUI(){
+      document.body.classList.toggle("ui-off");
+      const hidden = document.body.classList.contains("ui-off");
+      const btn = document.getElementById("m-toggle-ui");
+      if (btn) btn.textContent = hidden ? "👀 Hiện UI" : "🙈 Ẩn UI";
+    }
 
-    // --------- CONFIG ----------
+    // ---------- CONFIG ----------
     const CONFIG = {
       colors: {
         bg: 0x000000,
@@ -252,9 +303,8 @@
         treeRadius: 8
       },
       snow: {
-        enabled: true,
         count: isMobile ? 900 : 1800,
-        area: 60,            // spread area
+        area: 60,
         fallSpeed: 8.5,
         drift: 1.2
       },
@@ -262,41 +312,43 @@
     };
 
     const STATE = {
-      mode: 'TREE',          // TREE | SCATTER | FOCUS
+      mode: 'TREE',
+      modeTarget: 'TREE',
       focusTarget: null,
+
+      rotation: { x: 0, y: 0 },
+      rotationTarget: { x: 0, y: 0 },
+
       hand: { detected: false, x: 0, y: 0 },
-      rotation: { x: 0, y: 0 },          // current rotation
-      rotationTarget: { x: 0, y: 0 },    // for smoothing
-      modeTarget: 'TREE',                // desired mode
       gestureEnabled: false,
 
-      // audio reactive
+      snowOn: true,
       musicOn: false,
       audioReady: false,
-      beat: 0,       // 0..1 (smoothed)
-      snowOn: true,
-
-      // pointer interaction
-      isPointerDown: false,
-      lastX: 0,
-      lastY: 0
+      beat: 0
     };
 
-    let scene, camera, renderer, composer;
+    let scene, camera, renderer, composer, bloomPass;
     let mainGroup;
     let clock = new THREE.Clock();
+
     let particleSystem = [];
     let photoMeshGroup = new THREE.Group();
 
-    // lights refs for audio-reactive
     let ambient, innerLight, spotGold, spotBlue, fill;
-    let bloomPass;
 
-    // raycaster for click photos
+    // Raycaster click photo
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
 
-    // MediaPipe
+    // Snow
+    let snowPoints = null, snowGeo = null, snowVel = null;
+
+    // Audio
+    const audioEl = $("#bgm");
+    let audioCtx = null, analyser = null, sourceNode = null, freqData = null;
+
+    // MediaPipe (PC only)
     let handLandmarker = null;
     let video = null;
     let lastVideoTime = -1;
@@ -304,17 +356,8 @@
     // textures
     let caneTexture = null;
 
-    // snow
-    let snowPoints = null;
-    let snowGeo = null;
-    let snowVel = null;
-
-    // Audio analyzer
-    const audioEl = $("#bgm");
-    let audioCtx = null, analyser = null, sourceNode = null, freqData = null;
-
     // ---------- INIT ----------
-    async function init() {
+    async function init(){
       initThree();
       setupEnvironment();
       setupLights();
@@ -325,27 +368,29 @@
       setupPostProcessing();
       setupEvents();
 
-      await initMediaPipeSafe(); // safe
+      await initMediaPipeSafe(); // iPhone tự tắt
 
       const loader = $("#loader");
       loader.style.opacity = 0;
       setTimeout(() => loader.remove(), 800);
 
-      setStatus("Sẵn sàng ✅ • Click ảnh để focus • Space bật nhạc • S bật/tắt tuyết");
+      // iPhone: ẩn status gesture cho sạch
+      if (isIOS) statusEl.classList.add('ui-hidden');
+
       animate();
     }
 
-    function initThree() {
+    function initThree(){
       const container = $("#canvas-container");
 
       scene = new THREE.Scene();
       scene.background = new THREE.Color(CONFIG.colors.bg);
       scene.fog = new THREE.FogExp2(CONFIG.colors.bg, 0.01);
 
-      camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera = new THREE.PerspectiveCamera(42, window.innerWidth/window.innerHeight, 0.1, 1000);
       camera.position.set(0, 2, CONFIG.camera.z);
 
-      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
+      renderer = new THREE.WebGLRenderer({ antialias:true, alpha:false, powerPreference:"high-performance" });
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.setPixelRatio(DPR);
       renderer.toneMapping = THREE.ReinhardToneMapping;
@@ -358,12 +403,12 @@
       mainGroup.add(photoMeshGroup);
     }
 
-    function setupEnvironment() {
+    function setupEnvironment(){
       const pmremGenerator = new THREE.PMREMGenerator(renderer);
       scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
     }
 
-    function setupLights() {
+    function setupLights(){
       ambient = new THREE.AmbientLight(0xffffff, 0.6);
       scene.add(ambient);
 
@@ -386,7 +431,7 @@
       scene.add(fill);
     }
 
-    function setupPostProcessing() {
+    function setupPostProcessing(){
       const renderScene = new RenderPass(scene, camera);
       bloomPass = new UnrealBloomPass(
         new THREE.Vector2(window.innerWidth, window.innerHeight),
@@ -401,32 +446,30 @@
       composer.addPass(bloomPass);
     }
 
-    function createTextures() {
+    function createTextures(){
       const canvas = document.createElement('canvas');
       canvas.width = 128; canvas.height = 128;
       const ctx = canvas.getContext('2d');
-
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, 128, 128);
-
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0,0,128,128);
       ctx.fillStyle = '#880000';
       ctx.beginPath();
-      for (let i = -128; i < 256; i += 32) {
-        ctx.moveTo(i, 0);
-        ctx.lineTo(i + 32, 128);
-        ctx.lineTo(i + 16, 128);
-        ctx.lineTo(i - 16, 0);
+      for(let i=-128;i<256;i+=32){
+        ctx.moveTo(i,0);
+        ctx.lineTo(i+32,128);
+        ctx.lineTo(i+16,128);
+        ctx.lineTo(i-16,0);
       }
       ctx.fill();
 
       caneTexture = new THREE.CanvasTexture(canvas);
       caneTexture.wrapS = THREE.RepeatWrapping;
       caneTexture.wrapT = THREE.RepeatWrapping;
-      caneTexture.repeat.set(3, 3);
+      caneTexture.repeat.set(3,3);
     }
 
     class Particle {
-      constructor(mesh, type, isDust = false) {
+      constructor(mesh, type, isDust=false){
         this.mesh = mesh;
         this.type = type;
         this.isDust = isDust;
@@ -437,40 +480,40 @@
 
         const speedMult = (type === 'PHOTO') ? 0.25 : 2.0;
         this.spinSpeed = new THREE.Vector3(
-          (Math.random() - 0.5) * speedMult,
-          (Math.random() - 0.5) * speedMult,
-          (Math.random() - 0.5) * speedMult
+          (Math.random()-0.5)*speedMult,
+          (Math.random()-0.5)*speedMult,
+          (Math.random()-0.5)*speedMult
         );
 
         this.calculatePositions();
       }
 
-      calculatePositions() {
+      calculatePositions(){
         const h = CONFIG.particles.treeHeight;
-        const halfH = h / 2;
+        const halfH = h/2;
 
         let t = Math.random();
         t = Math.pow(t, 0.8);
-        const y = (t * h) - halfH;
+        const y = (t*h) - halfH;
 
         let rMax = CONFIG.particles.treeRadius * (1.0 - t);
         if (rMax < 0.5) rMax = 0.5;
 
         const angle = t * 50 * Math.PI + Math.random() * Math.PI;
-        const r = rMax * (0.8 + Math.random() * 0.4);
-        this.posTree.set(Math.cos(angle) * r, y, Math.sin(angle) * r);
+        const r = rMax * (0.8 + Math.random()*0.4);
+        this.posTree.set(Math.cos(angle)*r, y, Math.sin(angle)*r);
 
-        let rScatter = this.isDust ? (12 + Math.random() * 20) : (8 + Math.random() * 12);
-        const theta = Math.random() * Math.PI * 2;
-        const phi = Math.acos(2 * Math.random() - 1);
+        let rScatter = this.isDust ? (12 + Math.random()*20) : (8 + Math.random()*12);
+        const theta = Math.random()*Math.PI*2;
+        const phi = Math.acos(2*Math.random()-1);
         this.posScatter.set(
-          rScatter * Math.sin(phi) * Math.cos(theta),
-          rScatter * Math.sin(phi) * Math.sin(theta),
-          rScatter * Math.cos(phi)
+          rScatter*Math.sin(phi)*Math.cos(theta),
+          rScatter*Math.sin(phi)*Math.sin(theta),
+          rScatter*Math.cos(phi)
         );
       }
 
-      update(dt, mode, focusTargetMesh) {
+      update(dt, mode, focusTargetMesh){
         let target = this.posTree;
 
         if (mode === 'SCATTER') target = this.posScatter;
@@ -504,8 +547,7 @@
         let s = this.baseScale;
 
         if (this.isDust) {
-          // dust shimmer
-          s = this.baseScale * (0.8 + 0.4 * Math.sin(clock.elapsedTime * 4 + this.mesh.id));
+          s = this.baseScale * (0.8 + 0.4*Math.sin(clock.elapsedTime*4 + this.mesh.id));
           if (mode === 'TREE') s = 0;
         } else if (mode === 'SCATTER' && this.type === 'PHOTO') {
           s = this.baseScale * 2.2;
@@ -514,18 +556,17 @@
           else s = this.baseScale * 0.85;
         }
 
-        this.mesh.scale.lerp(new THREE.Vector3(s, s, s), 4 * dt);
+        this.mesh.scale.lerp(new THREE.Vector3(s,s,s), 4*dt);
       }
     }
 
-    // ---------- CREATE ----------
-    function createParticles() {
+    function createParticles(){
       const sphereGeo = new THREE.SphereGeometry(0.5, 26, 26);
       const boxGeo = new THREE.BoxGeometry(0.55, 0.55, 0.55);
 
       const curve = new THREE.CatmullRomCurve3([
-        new THREE.Vector3(0, -0.5, 0), new THREE.Vector3(0, 0.3, 0),
-        new THREE.Vector3(0.1, 0.5, 0), new THREE.Vector3(0.3, 0.4, 0)
+        new THREE.Vector3(0,-0.5,0), new THREE.Vector3(0,0.3,0),
+        new THREE.Vector3(0.1,0.5,0), new THREE.Vector3(0.3,0.4,0)
       ]);
       const candyGeo = new THREE.TubeGeometry(curve, 16, 0.08, 8, false);
 
@@ -552,19 +593,19 @@
 
       const candyMat = new THREE.MeshStandardMaterial({ map: caneTexture, roughness: 0.4 });
 
-      for (let i = 0; i < CONFIG.particles.count; i++) {
+      for(let i=0;i<CONFIG.particles.count;i++){
         const rand = Math.random();
         let mesh, type;
 
-        if (rand < 0.40) { mesh = new THREE.Mesh(boxGeo, greenMat); type = 'BOX'; }
-        else if (rand < 0.70) { mesh = new THREE.Mesh(boxGeo, goldMat); type = 'GOLD_BOX'; }
-        else if (rand < 0.92) { mesh = new THREE.Mesh(sphereGeo, goldMat); type = 'GOLD_SPHERE'; }
-        else if (rand < 0.97) { mesh = new THREE.Mesh(sphereGeo, redMat); type = 'RED'; }
-        else { mesh = new THREE.Mesh(candyGeo, candyMat); type = 'CANE'; }
+        if (rand < 0.40) { mesh = new THREE.Mesh(boxGeo, greenMat); type='BOX'; }
+        else if (rand < 0.70) { mesh = new THREE.Mesh(boxGeo, goldMat); type='GOLD_BOX'; }
+        else if (rand < 0.92) { mesh = new THREE.Mesh(sphereGeo, goldMat); type='GOLD_SPHERE'; }
+        else if (rand < 0.97) { mesh = new THREE.Mesh(sphereGeo, redMat); type='RED'; }
+        else { mesh = new THREE.Mesh(candyGeo, candyMat); type='CANE'; }
 
-        const s = 0.4 + Math.random() * 0.5;
-        mesh.scale.set(s, s, s);
-        mesh.rotation.set(Math.random() * 6, Math.random() * 6, Math.random() * 6);
+        const s = 0.4 + Math.random()*0.5;
+        mesh.scale.set(s,s,s);
+        mesh.rotation.set(Math.random()*6, Math.random()*6, Math.random()*6);
 
         mainGroup.add(mesh);
         particleSystem.push(new Particle(mesh, type, false));
@@ -576,15 +617,15 @@
         metalness: 1.0, roughness: 0
       });
       const star = new THREE.Mesh(starGeo, starMat);
-      star.position.set(0, CONFIG.particles.treeHeight / 2 + 1.2, 0);
+      star.position.set(0, CONFIG.particles.treeHeight/2 + 1.2, 0);
       mainGroup.add(star);
     }
 
-    function createDust() {
+    function createDust(){
       const geo = new THREE.TetrahedronGeometry(0.08, 0);
-      const mat = new THREE.MeshBasicMaterial({ color: 0xffeebb, transparent: true, opacity: 0.78 });
+      const mat = new THREE.MeshBasicMaterial({ color:0xffeebb, transparent:true, opacity:0.78 });
 
-      for (let i = 0; i < CONFIG.particles.dustCount; i++) {
+      for(let i=0;i<CONFIG.particles.dustCount;i++){
         const mesh = new THREE.Mesh(geo, mat);
         mesh.scale.setScalar(0.5 + Math.random());
         mainGroup.add(mesh);
@@ -592,13 +633,13 @@
       }
     }
 
-    function addPhotoToScene(texture) {
+    function addPhotoToScene(texture){
       const frameGeo = new THREE.BoxGeometry(1.4, 1.4, 0.05);
-      const frameMat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.champagneGold, metalness: 1.0, roughness: 0.1 });
+      const frameMat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.champagneGold, metalness:1.0, roughness:0.1 });
       const frame = new THREE.Mesh(frameGeo, frameMat);
 
       const photoGeo = new THREE.PlaneGeometry(1.2, 1.2);
-      const photoMat = new THREE.MeshBasicMaterial({ map: texture });
+      const photoMat = new THREE.MeshBasicMaterial({ map:texture });
       const photo = new THREE.Mesh(photoGeo, photoMat);
       photo.position.z = 0.04;
 
@@ -607,48 +648,46 @@
       group.add(frame);
       group.add(photo);
 
-      const s = 0.8;
-      group.scale.set(s, s, s);
+      group.scale.set(0.8,0.8,0.8);
 
       photoMeshGroup.add(group);
       particleSystem.push(new Particle(group, 'PHOTO', false));
     }
 
-    function handleImageUpload(e) {
+    function handleImageUpload(e){
       const files = e.target.files;
-      if (!files || !files.length) return;
-
+      if(!files || !files.length) return;
       Array.from(files).forEach(f => {
         const reader = new FileReader();
         reader.onload = (ev) => {
           new THREE.TextureLoader().load(ev.target.result, (t) => {
             t.colorSpace = THREE.SRGBColorSpace;
             addPhotoToScene(t);
-            setStatus("Đã thêm ảnh ✅ • Click ảnh để focus (ESC để thoát)");
+            setStatus("Đã thêm ảnh ✅ • Tap/click ảnh để focus • double tap focus ngẫu nhiên");
           });
         };
         reader.readAsDataURL(f);
       });
     }
 
-    // ---------- SNOW ----------
-    function createSnow() {
+    // ---------- Snow ----------
+    function createSnow(){
       const count = CONFIG.snow.count;
       const area = CONFIG.snow.area;
 
       snowGeo = new THREE.BufferGeometry();
-      const positions = new Float32Array(count * 3);
-      snowVel = new Float32Array(count * 3);
+      const positions = new Float32Array(count*3);
+      snowVel = new Float32Array(count*3);
 
-      for (let i = 0; i < count; i++) {
-        const ix = i * 3;
-        positions[ix + 0] = (Math.random() - 0.5) * area;
-        positions[ix + 1] = (Math.random() * area * 0.9) - (area * 0.2);
-        positions[ix + 2] = (Math.random() - 0.5) * area;
+      for(let i=0;i<count;i++){
+        const ix = i*3;
+        positions[ix+0] = (Math.random()-0.5)*area;
+        positions[ix+1] = (Math.random()*area*0.9) - (area*0.2);
+        positions[ix+2] = (Math.random()-0.5)*area;
 
-        snowVel[ix + 0] = (Math.random() - 0.5) * CONFIG.snow.drift;
-        snowVel[ix + 1] = - (CONFIG.snow.fallSpeed * (0.6 + Math.random() * 0.8));
-        snowVel[ix + 2] = (Math.random() - 0.5) * CONFIG.snow.drift;
+        snowVel[ix+0] = (Math.random()-0.5)*CONFIG.snow.drift;
+        snowVel[ix+1] = -(CONFIG.snow.fallSpeed*(0.6 + Math.random()*0.8));
+        snowVel[ix+2] = (Math.random()-0.5)*CONFIG.snow.drift;
       }
 
       snowGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
@@ -666,38 +705,30 @@
       STATE.snowOn = true;
     }
 
-    function updateSnow(dt) {
-      if (!snowPoints || !STATE.snowOn) return;
+    function updateSnow(dt){
+      if(!snowPoints || !STATE.snowOn) return;
 
       const area = CONFIG.snow.area;
       const pos = snowGeo.attributes.position.array;
 
-      for (let i = 0; i < CONFIG.snow.count; i++) {
-        const ix = i * 3;
+      for(let i=0;i<CONFIG.snow.count;i++){
+        const ix = i*3;
+        pos[ix+0] += snowVel[ix+0]*dt;
+        pos[ix+1] += snowVel[ix+1]*dt;
+        pos[ix+2] += snowVel[ix+2]*dt;
 
-        pos[ix + 0] += snowVel[ix + 0] * dt;
-        pos[ix + 1] += snowVel[ix + 1] * dt;
-        pos[ix + 2] += snowVel[ix + 2] * dt;
-
-        // wrap
-        if (pos[ix + 1] < -area * 0.6) {
-          pos[ix + 1] = area * 0.6;
-          pos[ix + 0] = (Math.random() - 0.5) * area;
-          pos[ix + 2] = (Math.random() - 0.5) * area;
+        if (pos[ix+1] < -area*0.6) {
+          pos[ix+1] = area*0.6;
+          pos[ix+0] = (Math.random()-0.5)*area;
+          pos[ix+2] = (Math.random()-0.5)*area;
         }
-        if (pos[ix + 0] > area * 0.6) pos[ix + 0] = -area * 0.6;
-        if (pos[ix + 0] < -area * 0.6) pos[ix + 0] = area * 0.6;
-        if (pos[ix + 2] > area * 0.6) pos[ix + 2] = -area * 0.6;
-        if (pos[ix + 2] < -area * 0.6) pos[ix + 2] = area * 0.6;
       }
-
       snowGeo.attributes.position.needsUpdate = true;
     }
 
-    // ---------- AUDIO ----------
-    async function ensureAudioGraph() {
-      if (STATE.audioReady) return true;
-
+    // ---------- Audio ----------
+    async function ensureAudioGraph(){
+      if(STATE.audioReady) return true;
       try {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         analyser = audioCtx.createAnalyser();
@@ -713,110 +744,150 @@
         return true;
       } catch (e) {
         console.warn("Audio init fail:", e);
-        setStatus("Không bật được audio analyzer (trình duyệt chặn). Bạn vẫn dùng được hiệu ứng bình thường.");
+        setStatus("Không bật được audio analyzer. Bạn vẫn dùng hiệu ứng bình thường.");
         return false;
       }
     }
 
-    function getBeatLevel() {
-      if (!STATE.audioReady || !analyser || !freqData || audioEl.paused) return 0;
-
+    function getBeatLevel(){
+      if(!STATE.audioReady || !analyser || !freqData || audioEl.paused) return 0;
       analyser.getByteFrequencyData(freqData);
 
-      // lấy năng lượng vùng bass-mid (đơn giản nhưng hiệu quả)
       let sum = 0;
-      const from = Math.floor(freqData.length * 0.02);
-      const to   = Math.floor(freqData.length * 0.18);
-      for (let i = from; i < to; i++) sum += freqData[i];
-
-      const avg = sum / (to - from) / 255; // 0..1
+      const from = Math.floor(freqData.length*0.02);
+      const to   = Math.floor(freqData.length*0.18);
+      for(let i=from;i<to;i++) sum += freqData[i];
+      const avg = sum / (to-from) / 255;
       return avg;
     }
 
-    function applyAudioReactive(dt) {
+    function applyAudioReactive(dt){
       const raw = getBeatLevel();
-      // smooth beat
       STATE.beat += (raw - STATE.beat) * (6.0 * dt);
       const b = STATE.beat;
 
-      // ánh sáng nhịp theo nhạc
-      innerLight.intensity = 1.7 + b * 3.0;
-      spotGold.intensity   = 950 + b * 700;
-      spotBlue.intensity   = 450 + b * 550;
-      ambient.intensity    = 0.55 + b * 0.25;
+      innerLight.intensity = 1.7 + b*3.0;
+      spotGold.intensity   = 950 + b*700;
+      spotBlue.intensity   = 450 + b*550;
+      ambient.intensity    = 0.55 + b*0.25;
 
-      // bloom nhịp theo nhạc (nhẹ thôi để không cháy)
-      bloomPass.strength = 0.38 + b * 0.22;
+      bloomPass.strength = 0.38 + b*0.22;
 
-      // đổi hue nhẹ cho spotGold theo beat
-      const h = (0.10 + b * 0.06) % 1;   // vàng -> vàng xanh nhẹ
-      const s = 0.65;
-      const l = 0.55;
-      spotGold.color.setHSL(h, s, l);
+      const h = (0.10 + b*0.06) % 1;
+      spotGold.color.setHSL(h, 0.65, 0.55);
     }
 
-    async function toggleMusic() {
-      // cần user gesture => gọi trong click/keydown
+    async function toggleMusic(){
       const ok = await ensureAudioGraph();
-      if (!ok) return;
+      if(!ok) return;
 
-      if (audioCtx.state === "suspended") {
-        await audioCtx.resume();
-      }
+      if (audioCtx.state === "suspended") await audioCtx.resume();
 
-      if (audioEl.src === "" || audioEl.src == null) {
-        setStatus("Bạn chưa upload nhạc 🎶 • Bấm 'Upload nhạc' để chọn file mp3/m4a...");
+      if(!audioEl.src){
+        setStatus("Bạn chưa upload nhạc 🎵 (PC: nút Upload nhạc). Trên iPhone: hãy upload từ Files.");
         return;
       }
 
-      if (audioEl.paused) {
-        try {
+      if(audioEl.paused){
+        try{
           await audioEl.play();
           STATE.musicOn = true;
           $("#btn-music").textContent = "🎶 Nhạc: Bật";
-          setStatus("Nhạc đang phát 🎶 • Ánh sáng sẽ nhấp nháy theo nhạc");
-        } catch (e) {
-          console.warn("Play blocked:", e);
-          setStatus("Trình duyệt chặn autoplay. Bấm lại nút Nhạc để bật.");
+          const mb = document.getElementById("m-music");
+          if (mb) mb.textContent = "⏸️ NHẠC";
+          setStatus("Nhạc đang phát 🎶");
+        }catch(e){
+          setStatus("iPhone chặn autoplay. Bấm lại nút NHẠC để bật.");
         }
       } else {
         audioEl.pause();
         STATE.musicOn = false;
         $("#btn-music").textContent = "🎶 Nhạc: Tắt";
+        const mb = document.getElementById("m-music");
+        if (mb) mb.textContent = "🎵 NHẠC";
         setStatus("Nhạc đã tắt.");
       }
     }
 
-    function handleAudioUpload(e) {
+    function handleAudioUpload(e){
       const file = e.target.files?.[0];
-      if (!file) return;
-
+      if(!file) return;
       const url = URL.createObjectURL(file);
       audioEl.src = url;
       audioEl.loop = true;
       audioEl.volume = 0.7;
-
-      setStatus(`Đã load nhạc: ${file.name} ✅ • Bấm 'Nhạc: Tắt/Bật' hoặc Space để phát`);
+      setStatus(`Đã load nhạc: ${file.name} ✅ • Bấm NHẠC để phát`);
     }
 
-    // ---------- MEDIAPIPE (SAFE) ----------
-    async function initMediaPipeSafe() {
-      // Gesture chỉ là “bonus”. Camera lỗi thì vẫn chạy OK.
-      setStatus("Gesture: đang khởi tạo… (nếu webcam bận sẽ tự tắt)");
+    // ---------- Mode ----------
+    function setMode(mode, opts = {}){
+      STATE.modeTarget = mode;
 
-      let vision = null;
-      try {
-        vision = await FilesetResolver.forVisionTasks(
-          "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
-        );
-      } catch (e) {
-        console.warn("MediaPipe wasm load fail:", e);
-        setStatus("Gesture: tắt (không load được MediaPipe) • Bạn vẫn dùng phím 1/2/3");
+      if (mode !== 'FOCUS') {
+        STATE.focusTarget = null;
+        setTitle("NOEL");
+      } else {
+        if (opts.targetMesh) STATE.focusTarget = opts.targetMesh;
+        else if (opts.randomPhoto) {
+          const photos = particleSystem.filter(p => p.type === 'PHOTO');
+          STATE.focusTarget = photos.length ? photos[Math.floor(Math.random()*photos.length)].mesh : null;
+        } else if (!STATE.focusTarget) {
+          const photos = particleSystem.filter(p => p.type === 'PHOTO');
+          STATE.focusTarget = photos.length ? photos[0].mesh : null;
+        }
+        if (STATE.focusTarget) setTitle(randomGreeting());
+      }
+
+      $("#btn-mode").textContent = `🔁 Mode: ${STATE.modeTarget}`;
+      const mb = document.getElementById("m-mode");
+      if (mb) mb.textContent = (STATE.modeTarget === 'TREE') ? "🌲 TREE"
+                         : (STATE.modeTarget === 'SCATTER') ? "🪐 SCATTER"
+                         : "🔎 FOCUS";
+    }
+
+    function exitFocus(){
+      setMode('SCATTER');
+    }
+
+    // ---------- Click pick photo ----------
+    function updatePointerFromEvent(ev){
+      const rect = renderer.domElement.getBoundingClientRect();
+      const x = (ev.clientX - rect.left) / rect.width;
+      const y = (ev.clientY - rect.top) / rect.height;
+      pointer.x = x*2 - 1;
+      pointer.y = -(y*2 - 1);
+    }
+
+    function tryPickPhoto(ev){
+      updatePointerFromEvent(ev);
+      raycaster.setFromCamera(pointer, camera);
+      const hits = raycaster.intersectObjects(photoMeshGroup.children, true);
+      if(!hits.length) return false;
+
+      let obj = hits[0].object;
+      while(obj && !obj.userData?.isPhotoGroup) obj = obj.parent;
+      if(!obj) return false;
+
+      setMode('FOCUS', { targetMesh: obj });
+      setStatus("FOCUS ✅ • ESC để thoát • Tap/click ảnh khác để đổi");
+      return true;
+    }
+
+    // ---------- MediaPipe (PC only) ----------
+    async function initMediaPipeSafe(){
+      if (isIOS) {
+        // iPhone: tắt gesture camera
+        STATE.gestureEnabled = false;
         return;
       }
 
-      try {
-        try {
+      setStatus("Gesture camera: đang khởi tạo… (PC)");
+      try{
+        const vision = await FilesetResolver.forVisionTasks(
+          "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
+        );
+
+        try{
           handLandmarker = await HandLandmarker.createFromOptions(vision, {
             baseOptions: {
               modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
@@ -826,7 +897,6 @@
             numHands: 1
           });
         } catch (gpuErr) {
-          console.warn("GPU delegate lỗi, chuyển CPU:", gpuErr);
           handLandmarker = await HandLandmarker.createFromOptions(vision, {
             baseOptions: {
               modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
@@ -836,40 +906,33 @@
             numHands: 1
           });
         }
-      } catch (e) {
-        console.warn("HandLandmarker init fail:", e);
-        setStatus("Gesture: tắt (khởi tạo model lỗi) • Bạn vẫn dùng phím 1/2/3");
-        return;
-      }
 
-      video = $("#webcam");
-      if (!navigator.mediaDevices?.getUserMedia) {
-        setStatus("Gesture: tắt (trình duyệt không hỗ trợ webcam) • Dùng phím 1/2/3");
-        return;
-      }
+        video = $("#webcam");
+        if (!navigator.mediaDevices?.getUserMedia) {
+          setStatus("Gesture camera: tắt (browser không hỗ trợ webcam)");
+          return;
+        }
 
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user" },
-          audio: false
-        });
-        video.srcObject = stream;
-        await new Promise((resolve) => video.addEventListener("loadeddata", resolve, { once: true }));
+        try{
+          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio:false });
+          video.srcObject = stream;
+          await new Promise((resolve) => video.addEventListener("loadeddata", resolve, { once:true }));
 
-        STATE.gestureEnabled = true;
-        setStatus("Gesture: bật ✅ (pinch=Focus • mở tay=Scatter • nắm tay=Tree) • Click ảnh cũng focus được");
-        predictWebcamLoop();
-      } catch (err) {
-        console.warn("Webcam không mở được:", err);
-        STATE.gestureEnabled = false;
-        setStatus("Gesture: tắt (webcam bận/bị chặn) • Dùng click/phím 1/2/3");
+          STATE.gestureEnabled = true;
+          setStatus("Gesture camera: bật ✅ (pinch=Focus • mở tay=Scatter • nắm tay=Tree)");
+          predictWebcamLoop();
+        } catch (err){
+          setStatus("Gesture camera: tắt (webcam bận/bị chặn) • Dùng phím 1/2/3 hoặc click");
+        }
+      } catch (e){
+        setStatus("Gesture camera: tắt (MediaPipe lỗi) • Dùng phím 1/2/3 hoặc click");
       }
     }
 
-    function predictWebcamLoop() {
-      if (!STATE.gestureEnabled || !handLandmarker || !video) return;
+    function predictWebcamLoop(){
+      if(!STATE.gestureEnabled || !handLandmarker || !video) return;
 
-      if (video.currentTime !== lastVideoTime) {
+      if(video.currentTime !== lastVideoTime){
         lastVideoTime = video.currentTime;
         const result = handLandmarker.detectForVideo(video, performance.now());
         processGestures(result);
@@ -877,23 +940,16 @@
       requestAnimationFrame(predictWebcamLoop);
     }
 
-    function processGestures(result) {
-      if (result.landmarks && result.landmarks.length > 0) {
-        STATE.hand.detected = true;
-
+    function processGestures(result){
+      if(result.landmarks && result.landmarks.length > 0){
         const lm = result.landmarks[0];
-        STATE.hand.x = (lm[9].x - 0.5) * 2;
-        STATE.hand.y = (lm[9].y - 0.5) * 2;
 
-        const thumb = lm[4];
-        const index = lm[8];
-        const wrist = lm[0];
-
-        const pinchDist = Math.hypot(thumb.x - index.x, thumb.y - index.y);
+        const thumb = lm[4], index = lm[8], wrist = lm[0];
+        const pinchDist = Math.hypot(thumb.x-index.x, thumb.y-index.y);
 
         const tips = [lm[8], lm[12], lm[16], lm[20]];
         let avgDist = 0;
-        tips.forEach(t => avgDist += Math.hypot(t.x - wrist.x, t.y - wrist.y));
+        tips.forEach(t => avgDist += Math.hypot(t.x-wrist.x, t.y-wrist.y));
         avgDist /= 4;
 
         if (pinchDist < 0.05) {
@@ -903,67 +959,11 @@
         } else if (avgDist > 0.4) {
           setMode('SCATTER');
         }
-      } else {
-        STATE.hand.detected = false;
       }
-    }
-
-    // ---------- MODE / FOCUS ----------
-    function setMode(mode, opts = {}) {
-      STATE.modeTarget = mode;
-
-      if (mode !== 'FOCUS') {
-        STATE.focusTarget = null;
-      } else {
-        if (opts.targetMesh) {
-          STATE.focusTarget = opts.targetMesh;
-        } else if (opts.randomPhoto) {
-          const photos = particleSystem.filter(p => p.type === 'PHOTO');
-          STATE.focusTarget = photos.length ? photos[Math.floor(Math.random()*photos.length)].mesh : null;
-        } else if (!STATE.focusTarget) {
-          const photos = particleSystem.filter(p => p.type === 'PHOTO');
-          STATE.focusTarget = photos.length ? photos[0].mesh : null;
-        }
-
-        if (STATE.focusTarget) setTitle(randomGreeting());
-      }
-
-      $("#btn-mode").textContent = `🔁 Mode: ${STATE.modeTarget}`;
-    }
-
-    function exitFocus() {
-      setTitle("NOEL");
-      setMode('SCATTER');
-    }
-
-    // ---------- Click / Tap to focus ----------
-    function updatePointerFromEvent(ev) {
-      const rect = renderer.domElement.getBoundingClientRect();
-      const x = (ev.clientX - rect.left) / rect.width;
-      const y = (ev.clientY - rect.top) / rect.height;
-      pointer.x = x * 2 - 1;
-      pointer.y = -(y * 2 - 1);
-    }
-
-    function tryPickPhoto(ev) {
-      updatePointerFromEvent(ev);
-      raycaster.setFromCamera(pointer, camera);
-
-      const hits = raycaster.intersectObjects(photoMeshGroup.children, true);
-      if (!hits.length) return false;
-
-      // tìm group cha có userData.isPhotoGroup
-      let obj = hits[0].object;
-      while (obj && !obj.userData?.isPhotoGroup) obj = obj.parent;
-      if (!obj) return false;
-
-      setMode('FOCUS', { targetMesh: obj });
-      setStatus("FOCUS ✅ • ESC để thoát • 1/2 chuyển mode • Click ảnh khác để đổi");
-      return true;
     }
 
     // ---------- Events ----------
-    function setupEvents() {
+    function setupEvents(){
       window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
@@ -980,51 +980,120 @@
         $("#btn-snow").textContent = `❄️ Tuyết: ${STATE.snowOn ? "Bật" : "Tắt"}`;
       });
       $("#btn-mode").addEventListener('click', () => {
-        // cycle
         const next = (STATE.modeTarget === 'TREE') ? 'SCATTER' : (STATE.modeTarget === 'SCATTER' ? 'FOCUS' : 'TREE');
         setMode(next, { randomPhoto: true });
       });
 
-      // click canvas focus
+      // Mobile appbar buttons
+      document.getElementById("m-toggle-ui")?.addEventListener("click", toggleUI);
+      document.getElementById("m-music")?.addEventListener("click", toggleMusic);
+      document.getElementById("m-focus")?.addEventListener("click", () => setMode('FOCUS', { randomPhoto: true }));
+      document.getElementById("m-mode")?.addEventListener("click", () => {
+        const next = (STATE.modeTarget === 'TREE') ? 'SCATTER' : (STATE.modeTarget === 'SCATTER' ? 'FOCUS' : 'TREE');
+        setMode(next, { randomPhoto: true });
+      });
+
+      // Click focus photo
       renderer.domElement.addEventListener('click', (ev) => {
-        // nếu đang drag thì bỏ
-        if (STATE.isPointerDown) return;
         tryPickPhoto(ev);
       });
 
-      // pointer drag rotate (desktop + mobile)
+      // Drag rotate (desktop pointer)
+      let isDown = false, lastX = 0, lastY = 0;
       renderer.domElement.addEventListener('pointerdown', (ev) => {
-        STATE.isPointerDown = true;
-        STATE.lastX = ev.clientX;
-        STATE.lastY = ev.clientY;
+        isDown = true;
+        lastX = ev.clientX; lastY = ev.clientY;
       });
-      window.addEventListener('pointerup', () => {
-        STATE.isPointerDown = false;
-      });
+      window.addEventListener('pointerup', () => { isDown = false; });
       window.addEventListener('pointermove', (ev) => {
-        if (!STATE.isPointerDown) return;
-        const dx = ev.clientX - STATE.lastX;
-        const dy = ev.clientY - STATE.lastY;
-        STATE.lastX = ev.clientX;
-        STATE.lastY = ev.clientY;
+        if(!isDown) return;
+        const dx = ev.clientX - lastX;
+        const dy = ev.clientY - lastY;
+        lastX = ev.clientX; lastY = ev.clientY;
 
-        // adjust target rotation
         STATE.rotationTarget.y += dx * 0.006;
         STATE.rotationTarget.x += dy * 0.0025;
         STATE.rotationTarget.x = THREE.MathUtils.clamp(STATE.rotationTarget.x, -0.65, 0.65);
       });
 
-      // keyboard
+      // Touch gestures (mobile)
+      let lastTap = 0;
+      let pinchStartDist = 0;
+      let camStartZ = camera.position.z;
+      let swipeStartX = 0, swipeStartY = 0;
+      let touchLastX = 0, touchLastY = 0;
+      let pinching = false;
+
+      function dist2(t1,t2){
+        const dx = t1.clientX - t2.clientX;
+        const dy = t1.clientY - t2.clientY;
+        return Math.hypot(dx,dy);
+      }
+
+      renderer.domElement.addEventListener('touchstart', (e) => {
+        if(!isMobile) return;
+        if(e.touches.length === 1){
+          const now = Date.now();
+          if(now - lastTap < 280){
+            setMode('FOCUS', { randomPhoto: true });
+          }
+          lastTap = now;
+
+          touchLastX = e.touches[0].clientX;
+          touchLastY = e.touches[0].clientY;
+          swipeStartX = touchLastX;
+          swipeStartY = touchLastY;
+          pinching = false;
+        } else if(e.touches.length === 2){
+          pinching = true;
+          pinchStartDist = dist2(e.touches[0], e.touches[1]);
+          camStartZ = camera.position.z;
+        }
+      }, { passive:true });
+
+      renderer.domElement.addEventListener('touchmove', (e) => {
+        if(!isMobile) return;
+
+        if(e.touches.length === 1 && !pinching){
+          const x = e.touches[0].clientX;
+          const y = e.touches[0].clientY;
+          const dx = x - touchLastX;
+          const dy = y - touchLastY;
+          touchLastX = x; touchLastY = y;
+
+          STATE.rotationTarget.y += dx * 0.0065;
+          STATE.rotationTarget.x += dy * 0.0028;
+          STATE.rotationTarget.x = THREE.MathUtils.clamp(STATE.rotationTarget.x, -0.65, 0.65);
+
+        } else if(e.touches.length === 2){
+          const d = dist2(e.touches[0], e.touches[1]);
+          const scale = d / Math.max(1, pinchStartDist);
+          const nextZ = camStartZ / scale;
+          camera.position.z = THREE.MathUtils.clamp(nextZ, 28, 80);
+        }
+      }, { passive:true });
+
+      renderer.domElement.addEventListener('touchend', (e) => {
+        if(!isMobile) return;
+        if(e.touches.length > 0) return;
+
+        const ct = e.changedTouches?.[0];
+        if(!ct) return;
+        const dx = ct.clientX - swipeStartX;
+        const dy = ct.clientY - swipeStartY;
+
+        if(Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy)*1.2){
+          if(dx > 0) setMode('TREE');
+          else setMode('SCATTER');
+        }
+
+        pinching = false;
+      }, { passive:true });
+
+      // Keyboard (PC)
       window.addEventListener('keydown', async (e) => {
         const k = e.key.toLowerCase();
-
-        if (k === 'h') {
-  // Ẩn/hiện đúng 3 dòng: subtitle + controls + hint
-  	subtitleEl.classList.toggle('ui-hidden');
-  	controlsEl.classList.toggle('ui-hidden');
-  	document.getElementById('hint')?.classList.toggle('ui-hidden');
-	}
-
+        if (k === 'h') toggleUI();
         if (k === '1') setMode('TREE');
         if (k === '2') setMode('SCATTER');
         if (k === '3') setMode('FOCUS', { randomPhoto: true });
@@ -1033,54 +1102,33 @@
           STATE.snowOn = !STATE.snowOn;
           $("#btn-snow").textContent = `❄️ Tuyết: ${STATE.snowOn ? "Bật" : "Tắt"}`;
         }
-        if (k === ' '){
+        if (k === ' ') {
           e.preventDefault();
           await toggleMusic();
         }
       });
-
-      // pause rendering work when tab hidden (mobile friendly)
-      document.addEventListener("visibilitychange", () => {
-        if (document.hidden) {
-          if (!audioEl.paused) audioEl.pause();
-          STATE.musicOn = false;
-          $("#btn-music").textContent = "🎶 Nhạc: Tắt";
-        }
-      }, { passive: true });
     }
 
     // ---------- Animate ----------
-    function animate() {
+    function animate(){
       requestAnimationFrame(animate);
       const dt = Math.min(clock.getDelta(), 0.033);
 
-      // Smooth mode switching
       if (STATE.mode !== STATE.modeTarget) {
-        // when switching to focus without target, pick random
         if (STATE.modeTarget === 'FOCUS' && !STATE.focusTarget) {
           const photos = particleSystem.filter(p => p.type === 'PHOTO');
           STATE.focusTarget = photos.length ? photos[Math.floor(Math.random()*photos.length)].mesh : null;
         }
-        // apply immediately (movement is already eased inside Particle.update)
         STATE.mode = STATE.modeTarget;
       }
 
-      // Rotation target logic
-      // If gesture active in SCATTER, let hand steer rotationTarget
-      if (STATE.mode === 'SCATTER' && STATE.hand.detected) {
-        const targetRotY = STATE.hand.x * Math.PI * 0.9;
-        const targetRotX = STATE.hand.y * Math.PI * 0.25;
-        STATE.rotationTarget.y += (targetRotY - STATE.rotationTarget.y) * 4.0 * dt;
-        STATE.rotationTarget.x += (targetRotX - STATE.rotationTarget.x) * 4.0 * dt;
+      // idle drift
+      if (STATE.mode === 'TREE') {
+        STATE.rotationTarget.y += 0.3 * dt;
+        STATE.rotationTarget.x += (0 - STATE.rotationTarget.x) * 2.0 * dt;
       } else {
-        // idle drift
-        if (STATE.mode === 'TREE') {
-          STATE.rotationTarget.y += 0.3 * dt;
-          STATE.rotationTarget.x += (0 - STATE.rotationTarget.x) * 2.0 * dt;
-        } else {
-          STATE.rotationTarget.y += 0.1 * dt;
-          STATE.rotationTarget.x += (0 - STATE.rotationTarget.x) * 1.2 * dt;
-        }
+        STATE.rotationTarget.y += 0.1 * dt;
+        STATE.rotationTarget.x += (0 - STATE.rotationTarget.x) * 1.2 * dt;
       }
 
       // smooth follow
@@ -1090,13 +1138,9 @@
       mainGroup.rotation.y = STATE.rotation.y;
       mainGroup.rotation.x = STATE.rotation.x;
 
-      // update particles
       particleSystem.forEach(p => p.update(dt, STATE.mode, STATE.focusTarget));
 
-      // snow
       updateSnow(dt);
-
-      // audio reactive
       applyAudioReactive(dt);
 
       composer.render();
