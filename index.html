@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NOEL_APP_MOBILE</title>
+  <title>NOEL_APP_FINAL</title>
 
   <style>
     body { margin: 0; overflow: hidden; background:#000; font-family: 'Times New Roman', serif; }
@@ -57,7 +57,6 @@
       transition: opacity .25s ease;
     }
 
-    /* Desktop controls (top) */
     .controls{
       margin-top:18px;
       pointer-events:auto;
@@ -128,14 +127,13 @@
       transition: opacity .25s ease;
     }
 
-    /* Hide helper */
     .ui-hidden { display:none !important; }
 
     /* Mobile App UI bar */
     #appbar { display:none; }
     @media (max-width: 768px) {
-      #controls { display:none !important; } /* dùng appbar */
-      #hint { display:none !important; }     /* gọn */
+      #controls { display:none !important; }
+      #hint { display:none !important; }
       #subtitle { font-size: 11px; opacity: .85; }
 
       #appbar{
@@ -175,7 +173,6 @@
       }
     }
 
-    /* UI OFF toggle */
     .ui-off #ui-layer{ opacity:0; pointer-events:none; }
     .ui-off #appbar{ opacity:0; pointer-events:none; }
   </style>
@@ -223,6 +220,7 @@
 
       <button class="btn secondary" id="btn-snow">❄️ Tuyết: Bật</button>
       <button class="btn secondary" id="btn-mode">🔁 Mode: TREE</button>
+      <button class="btn secondary" id="btn-ui">🙈 Ẩn UI</button>
     </div>
 
     <div id="hint">PC: 1=Tree • 2=Scatter • 3=Focus • ESC=Thoát • Space=Nhạc • S=Tuyết • H=Ẩn UI</div>
@@ -230,16 +228,16 @@
   </div>
 
   <!-- Mobile App Bar -->
- <div id="appbar">
-  <button class="appbtn" id="m-toggle-ui">🙈 UI</button>
-  <button class="appbtn" id="m-add-photo">🖼️ ẢNH</button>
-  <button class="appbtn primary" id="m-mode">🌲 TREE</button>
-  <button class="appbtn" id="m-music">🎵 NHẠC</button>
-</div>
-
+  <div id="appbar">
+    <button class="appbtn" id="m-toggle-ui">🙈 UI</button>
+    <button class="appbtn" id="m-add-photo">🖼️ ẢNH</button>
+    <button class="appbtn" id="m-upload-audio">⬆️ NHẠC</button>
+    <button class="appbtn primary" id="m-mode">🌲 TREE</button>
+    <button class="appbtn" id="m-snow">❄️ TUYẾT</button>
+    <button class="appbtn" id="m-play">🎵 PHÁT</button>
   </div>
 
-  <!-- hidden webcam wrapper (PC only) -->
+  <!-- hidden webcam (PC only) -->
   <div id="webcam-wrapper" style="display:none;">
     <video id="webcam" autoplay playsinline style="display:none;"></video>
   </div>
@@ -259,7 +257,6 @@
     const titleEl = $("#title");
     const subtitleEl = $("#subtitle");
     const statusEl = $("#status-pill");
-    const controlsEl = $("#controls");
 
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
     const isMobile = matchMedia("(max-width: 768px)").matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -282,12 +279,14 @@
       return GREETINGS[Math.floor(Math.random()*GREETINGS.length)];
     }
 
-    // UI toggle (PC key H + mobile button)
+    // UI toggle
     function toggleUI(){
       document.body.classList.toggle("ui-off");
       const hidden = document.body.classList.contains("ui-off");
-      const btn = document.getElementById("m-toggle-ui");
-      if (btn) btn.textContent = hidden ? "👀 Hiện UI" : "🙈 Ẩn UI";
+      const m = document.getElementById("m-toggle-ui");
+      if(m) m.textContent = hidden ? "👀 UI" : "🙈 UI";
+      const d = document.getElementById("btn-ui");
+      if(d) d.textContent = hidden ? "👀 Hiện UI" : "🙈 Ẩn UI";
     }
 
     // ---------- CONFIG ----------
@@ -321,9 +320,6 @@
       rotation: { x: 0, y: 0 },
       rotationTarget: { x: 0, y: 0 },
 
-      hand: { detected: false, x: 0, y: 0 },
-      gestureEnabled: false,
-
       snowOn: true,
       musicOn: false,
       audioReady: false,
@@ -350,15 +346,9 @@
     const audioEl = $("#bgm");
     let audioCtx = null, analyser = null, sourceNode = null, freqData = null;
 
-    // MediaPipe (PC only)
-    let handLandmarker = null;
-    let video = null;
-    let lastVideoTime = -1;
-
     // textures
     let caneTexture = null;
 
-    // ---------- INIT ----------
     async function init(){
       initThree();
       setupEnvironment();
@@ -370,13 +360,10 @@
       setupPostProcessing();
       setupEvents();
 
-      await initMediaPipeSafe(); // iPhone tự tắt
-
       const loader = $("#loader");
       loader.style.opacity = 0;
       setTimeout(() => loader.remove(), 800);
 
-      // iPhone: ẩn status gesture cho sạch
       if (isIOS) statusEl.classList.add('ui-hidden');
 
       animate();
@@ -665,7 +652,7 @@
           new THREE.TextureLoader().load(ev.target.result, (t) => {
             t.colorSpace = THREE.SRGBColorSpace;
             addPhotoToScene(t);
-            setStatus("Đã thêm ảnh ✅ • Tap/click ảnh để focus • double tap focus ngẫu nhiên");
+            setStatus("Đã thêm ảnh ✅ • Tap/click ảnh để focus");
           });
         };
         reader.readAsDataURL(f);
@@ -779,14 +766,14 @@
       spotGold.color.setHSL(h, 0.65, 0.55);
     }
 
-    async function toggleMusic(){
+    async function playPauseMusic(){
       const ok = await ensureAudioGraph();
       if(!ok) return;
 
       if (audioCtx.state === "suspended") await audioCtx.resume();
 
       if(!audioEl.src){
-        setStatus("Bạn chưa upload nhạc 🎵 (PC: nút Upload nhạc). Trên iPhone: hãy upload từ Files.");
+        setStatus("Bạn chưa upload nhạc 🎵 (bấm ⬆️ NHẠC để chọn file mp3).");
         return;
       }
 
@@ -795,18 +782,18 @@
           await audioEl.play();
           STATE.musicOn = true;
           $("#btn-music").textContent = "🎶 Nhạc: Bật";
-          const mb = document.getElementById("m-music");
-          if (mb) mb.textContent = "⏸️ NHẠC";
+          const mp = document.getElementById("m-play");
+          if(mp) mp.textContent = "⏸️ DỪNG";
           setStatus("Nhạc đang phát 🎶");
         }catch(e){
-          setStatus("iPhone chặn autoplay. Bấm lại nút NHẠC để bật.");
+          setStatus("iPhone chặn autoplay. Bấm lại nút PHÁT để bật.");
         }
       } else {
         audioEl.pause();
         STATE.musicOn = false;
         $("#btn-music").textContent = "🎶 Nhạc: Tắt";
-        const mb = document.getElementById("m-music");
-        if (mb) mb.textContent = "🎵 NHẠC";
+        const mp = document.getElementById("m-play");
+        if(mp) mp.textContent = "🎵 PHÁT";
         setStatus("Nhạc đã tắt.");
       }
     }
@@ -818,7 +805,7 @@
       audioEl.src = url;
       audioEl.loop = true;
       audioEl.volume = 0.7;
-      setStatus(`Đã load nhạc: ${file.name} ✅ • Bấm NHẠC để phát`);
+      setStatus(`Đã load nhạc: ${file.name} ✅ • Bấm PHÁT để nghe`);
     }
 
     // ---------- Mode ----------
@@ -829,14 +816,9 @@
         STATE.focusTarget = null;
         setTitle("NOEL");
       } else {
+        const photos = particleSystem.filter(p => p.type === 'PHOTO');
         if (opts.targetMesh) STATE.focusTarget = opts.targetMesh;
-        else if (opts.randomPhoto) {
-          const photos = particleSystem.filter(p => p.type === 'PHOTO');
-          STATE.focusTarget = photos.length ? photos[Math.floor(Math.random()*photos.length)].mesh : null;
-        } else if (!STATE.focusTarget) {
-          const photos = particleSystem.filter(p => p.type === 'PHOTO');
-          STATE.focusTarget = photos.length ? photos[0].mesh : null;
-        }
+        else STATE.focusTarget = photos.length ? photos[Math.floor(Math.random()*photos.length)].mesh : null;
         if (STATE.focusTarget) setTitle(randomGreeting());
       }
 
@@ -847,8 +829,9 @@
                          : "🔎 FOCUS";
     }
 
-    function exitFocus(){
-      setMode('SCATTER');
+    function cycleMode(){
+      const next = (STATE.modeTarget === 'TREE') ? 'SCATTER' : (STATE.modeTarget === 'SCATTER' ? 'FOCUS' : 'TREE');
+      setMode(next);
     }
 
     // ---------- Click pick photo ----------
@@ -871,146 +854,56 @@
       if(!obj) return false;
 
       setMode('FOCUS', { targetMesh: obj });
-      setStatus("FOCUS ✅ • ESC để thoát • Tap/click ảnh khác để đổi");
+      setStatus("FOCUS ✅ • Tap ảnh khác để đổi");
       return true;
     }
 
-    // ---------- MediaPipe (PC only) ----------
-    async function initMediaPipeSafe(){
-      if (isIOS) {
-        // iPhone: tắt gesture camera
-        STATE.gestureEnabled = false;
-        return;
-      }
+    function setupEvents(){
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        composer.setSize(window.innerWidth, window.innerHeight);
+      });
 
-      setStatus("Gesture camera: đang khởi tạo… (PC)");
-      try{
-        const vision = await FilesetResolver.forVisionTasks(
-          "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
-        );
-
-        try{
-          handLandmarker = await HandLandmarker.createFromOptions(vision, {
-            baseOptions: {
-              modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
-              delegate: "GPU"
-            },
-            runningMode: "VIDEO",
-            numHands: 1
-          });
-        } catch (gpuErr) {
-          handLandmarker = await HandLandmarker.createFromOptions(vision, {
-            baseOptions: {
-              modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
-              delegate: "CPU"
-            },
-            runningMode: "VIDEO",
-            numHands: 1
-          });
-        }
-
-        video = $("#webcam");
-        if (!navigator.mediaDevices?.getUserMedia) {
-          setStatus("Gesture camera: tắt (browser không hỗ trợ webcam)");
-          return;
-        }
-
-        try{
-          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio:false });
-          video.srcObject = stream;
-          await new Promise((resolve) => video.addEventListener("loadeddata", resolve, { once:true }));
-
-          STATE.gestureEnabled = true;
-          setStatus("Gesture camera: bật ✅ (pinch=Focus • mở tay=Scatter • nắm tay=Tree)");
-          predictWebcamLoop();
-        } catch (err){
-          setStatus("Gesture camera: tắt (webcam bận/bị chặn) • Dùng phím 1/2/3 hoặc click");
-        }
-      } catch (e){
-        setStatus("Gesture camera: tắt (MediaPipe lỗi) • Dùng phím 1/2/3 hoặc click");
-      }
-    }
-
-    function predictWebcamLoop(){
-      if(!STATE.gestureEnabled || !handLandmarker || !video) return;
-
-      if(video.currentTime !== lastVideoTime){
-        lastVideoTime = video.currentTime;
-        const result = handLandmarker.detectForVideo(video, performance.now());
-        processGestures(result);
-      }
-      requestAnimationFrame(predictWebcamLoop);
-    }
-
-    function processGestures(result){
-      if(result.landmarks && result.landmarks.length > 0){
-        const lm = result.landmarks[0];
-
-        const thumb = lm[4], index = lm[8], wrist = lm[0];
-        const pinchDist = Math.hypot(thumb.x-index.x, thumb.y-index.y);
-
-        const tips = [lm[8], lm[12], lm[16], lm[20]];
-        let avgDist = 0;
-        tips.forEach(t => avgDist += Math.hypot(t.x-wrist.x, t.y-wrist.y));
-        avgDist /= 4;
-
-        if (pinchDist < 0.05) {
-          setMode('FOCUS', { randomPhoto: true });
-        } else if (avgDist < 0.25) {
-          setMode('TREE');
-        } else if (avgDist > 0.4) {
-          setMode('SCATTER');
-        }
-      }
-    }
-
-    // ---------- Events ----------
-   function setupEvents() {
-
-  // resize
-  window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    composer.setSize(window.innerWidth, window.innerHeight);
-  });
-
-  // 📱 Mobile: nút ẢNH -> mở chọn ảnh
-  document.getElementById("m-add-photo")?.addEventListener("click", () => {
-    document.getElementById("file-input")?.click();
-  });
-
-}
-
-
-      $("#file-input").addEventListener('change', handleImageUpload);
-      $("#audio-input").addEventListener('change', handleAudioUpload);
-
-      $("#btn-music").addEventListener('click', toggleMusic);
+      // desktop buttons
+      $("#btn-music").addEventListener('click', playPauseMusic);
       $("#btn-snow").addEventListener('click', () => {
         STATE.snowOn = !STATE.snowOn;
         $("#btn-snow").textContent = `❄️ Tuyết: ${STATE.snowOn ? "Bật" : "Tắt"}`;
+        const ms = document.getElementById("m-snow");
+        if(ms) ms.textContent = STATE.snowOn ? "❄️ TUYẾT" : "🌙 TUYẾT";
       });
-      $("#btn-mode").addEventListener('click', () => {
-        const next = (STATE.modeTarget === 'TREE') ? 'SCATTER' : (STATE.modeTarget === 'SCATTER' ? 'FOCUS' : 'TREE');
-        setMode(next, { randomPhoto: true });
-      });
+      $("#btn-mode").addEventListener('click', cycleMode);
+      $("#btn-ui").addEventListener('click', toggleUI);
 
-      // Mobile appbar buttons
+      // inputs
+      $("#file-input").addEventListener('change', handleImageUpload);
+      $("#audio-input").addEventListener('change', handleAudioUpload);
+
+      // mobile buttons
       document.getElementById("m-toggle-ui")?.addEventListener("click", toggleUI);
-      document.getElementById("m-music")?.addEventListener("click", toggleMusic);
-      document.getElementById("m-focus")?.addEventListener("click", () => setMode('FOCUS', { randomPhoto: true }));
-      document.getElementById("m-mode")?.addEventListener("click", () => {
-        const next = (STATE.modeTarget === 'TREE') ? 'SCATTER' : (STATE.modeTarget === 'SCATTER' ? 'FOCUS' : 'TREE');
-        setMode(next, { randomPhoto: true });
+      document.getElementById("m-add-photo")?.addEventListener("click", () => {
+        document.getElementById("file-input")?.click();
       });
+      document.getElementById("m-upload-audio")?.addEventListener("click", () => {
+        document.getElementById("audio-input")?.click();
+      });
+      document.getElementById("m-mode")?.addEventListener("click", cycleMode);
+      document.getElementById("m-snow")?.addEventListener("click", () => {
+        STATE.snowOn = !STATE.snowOn;
+        $("#btn-snow").textContent = `❄️ Tuyết: ${STATE.snowOn ? "Bật" : "Tắt"}`;
+        const ms = document.getElementById("m-snow");
+        if(ms) ms.textContent = STATE.snowOn ? "❄️ TUYẾT" : "🌙 TUYẾT";
+      });
+      document.getElementById("m-play")?.addEventListener("click", playPauseMusic);
 
-      // Click focus photo
+      // click focus photo
       renderer.domElement.addEventListener('click', (ev) => {
         tryPickPhoto(ev);
       });
 
-      // Drag rotate (desktop pointer)
+      // pointer drag rotate (desktop)
       let isDown = false, lastX = 0, lastY = 0;
       renderer.domElement.addEventListener('pointerdown', (ev) => {
         isDown = true;
@@ -1028,7 +921,7 @@
         STATE.rotationTarget.x = THREE.MathUtils.clamp(STATE.rotationTarget.x, -0.65, 0.65);
       });
 
-      // Touch gestures (mobile)
+      // touch gestures (mobile)
       let lastTap = 0;
       let pinchStartDist = 0;
       let camStartZ = camera.position.z;
@@ -1047,7 +940,7 @@
         if(e.touches.length === 1){
           const now = Date.now();
           if(now - lastTap < 280){
-            setMode('FOCUS', { randomPhoto: true });
+            setMode('FOCUS');
           }
           lastTap = now;
 
@@ -1102,39 +995,32 @@
         pinching = false;
       }, { passive:true });
 
-      // Keyboard (PC)
+      // keyboard
       window.addEventListener('keydown', async (e) => {
         const k = e.key.toLowerCase();
         if (k === 'h') toggleUI();
         if (k === '1') setMode('TREE');
         if (k === '2') setMode('SCATTER');
-        if (k === '3') setMode('FOCUS', { randomPhoto: true });
-        if (k === 'escape') exitFocus();
+        if (k === '3') setMode('FOCUS');
         if (k === 's') {
           STATE.snowOn = !STATE.snowOn;
           $("#btn-snow").textContent = `❄️ Tuyết: ${STATE.snowOn ? "Bật" : "Tắt"}`;
         }
         if (k === ' ') {
           e.preventDefault();
-          await toggleMusic();
+          await playPauseMusic();
         }
       });
     }
 
-    // ---------- Animate ----------
     function animate(){
       requestAnimationFrame(animate);
       const dt = Math.min(clock.getDelta(), 0.033);
 
       if (STATE.mode !== STATE.modeTarget) {
-        if (STATE.modeTarget === 'FOCUS' && !STATE.focusTarget) {
-          const photos = particleSystem.filter(p => p.type === 'PHOTO');
-          STATE.focusTarget = photos.length ? photos[Math.floor(Math.random()*photos.length)].mesh : null;
-        }
         STATE.mode = STATE.modeTarget;
       }
 
-      // idle drift
       if (STATE.mode === 'TREE') {
         STATE.rotationTarget.y += 0.3 * dt;
         STATE.rotationTarget.x += (0 - STATE.rotationTarget.x) * 2.0 * dt;
@@ -1143,7 +1029,6 @@
         STATE.rotationTarget.x += (0 - STATE.rotationTarget.x) * 1.2 * dt;
       }
 
-      // smooth follow
       STATE.rotation.y += (STATE.rotationTarget.y - STATE.rotation.y) * 3.0 * dt;
       STATE.rotation.x += (STATE.rotationTarget.x - STATE.rotation.x) * 3.0 * dt;
 
@@ -1162,4 +1047,3 @@
   </script>
 </body>
 </html>
-
